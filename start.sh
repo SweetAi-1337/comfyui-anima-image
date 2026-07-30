@@ -54,35 +54,70 @@ download_if_missing \
   "https://huggingface.co/Kim2091/2x-AnimeSharpV4/resolve/main/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors" \
   "$COMFY/models/upscale_models/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors"
 
+# === Файлы с Civitai (нужен CIVITAI_TOKEN) ===
 if [ -n "$CIVITAI_TOKEN" ]; then
   echo "=== Скачиваю модели с Civitai ==="
 
-  if [ -n "$ANIMA_CHECKPOINT_URL" ]; then
-    download_if_missing \
-      "${ANIMA_CHECKPOINT_URL}&token=${CIVITAI_TOKEN}" \
-      "$COMFY/models/diffusion_models/anima_checkpoint.safetensors"
+  # Чекпоинты (несколько, через запятую в ANIMA_CHECKPOINT_URLS)
+  if [ -n "$ANIMA_CHECKPOINT_URLS" ]; then
+    IFS=',' read -ra CKPT_URLS <<< "$ANIMA_CHECKPOINT_URLS"
+    i=1
+    for url in "${CKPT_URLS[@]}"; do
+      download_if_missing \
+        "${url}&token=${CIVITAI_TOKEN}" \
+        "$COMFY/models/diffusion_models/checkpoint_${i}.safetensors"
+      i=$((i+1))
+    done
   fi
 
+  # Лоры стиля (несколько, через запятую в STYLE_LORA_URLS)
+  if [ -n "$STYLE_LORA_URLS" ]; then
+    IFS=',' read -ra STYLE_URLS <<< "$STYLE_LORA_URLS"
+    i=1
+    for url in "${STYLE_URLS[@]}"; do
+      download_if_missing \
+        "${url}&token=${CIVITAI_TOKEN}" \
+        "$COMFY/models/loras/style_${i}.safetensors"
+      i=$((i+1))
+    done
+  fi
+
+  # Лоры персонажей (несколько, через запятую в CHARACTER_LORA_URLS)
+  if [ -n "$CHARACTER_LORA_URLS" ]; then
+    IFS=',' read -ra CHAR_URLS <<< "$CHARACTER_LORA_URLS"
+    i=1
+    for url in "${CHAR_URLS[@]}"; do
+      download_if_missing \
+        "${url}&token=${CIVITAI_TOKEN}" \
+        "$COMFY/models/loras/character_${i}.safetensors"
+      i=$((i+1))
+    done
+  fi
+
+  # Turbo LoRA
   download_if_missing \
     "https://civitai.red/api/download/models/2560840?token=${CIVITAI_TOKEN}" \
     "$COMFY/models/loras/anima_turbo_lora.safetensors"
 
+  # Edit LoRA
   download_if_missing \
     "https://civitai.red/api/download/models/2650553?token=${CIVITAI_TOKEN}" \
     "$COMFY/models/loras/anima_edit_lora.safetensors"
 
+  # Body-детектор (опционально, если задана ссылка)
   if [ -n "$BODY_DETECTOR_URL" ]; then
     download_if_missing \
       "${BODY_DETECTOR_URL}&token=${CIVITAI_TOKEN}" \
       "$COMFY/models/ultralytics/bbox/body_detector.safetensors"
   fi
 
+  # NSFW-детейлер
   download_if_missing \
     "https://civitai.red/api/download/models/1313556?token=${CIVITAI_TOKEN}" \
     "$COMFY/models/ultralytics/bbox/nsfw_detailer.safetensors"
 
 else
-  echo "[!] CIVITAI_TOKEN не задан — модели с Civitai пропущены."
+  echo "[!] CIVITAI_TOKEN не задан — модели с Civitai пропущены. Добавь переменную окружения CIVITAI_TOKEN в настройках пода."
 fi
 
 echo "=== Всё готово, запускаю ComfyUI ==="
